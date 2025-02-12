@@ -1,0 +1,8 @@
+names:
+- without_mask
+- with_mask
+- mask_worn_incorrectly
+nc: 3
+test: face-mask-detection/test
+train: face-mask-detection/train
+val: face-mask-detection/val
