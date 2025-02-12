@@ -14,7 +14,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.title("Face Mask Detection App 😷")
 
-SAMPLE_IMAGES_DIR = "sample images"
+SAMPLE_IMAGES_DIR = "sample image"
 
 def process_and_display(image):
     res = model(image)
