@@ -5,78 +5,64 @@ from ultralytics import YOLO
 import os
 import tempfile
 
-# Load the saved YOLO model
+# Loading the saved model
 model = YOLO("weights/last.pt")
 
 # Streamlit app layout
 st.set_page_config(layout="wide")
 
+# Create columns for centering the title
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.title("Face Mask Detection App 😷")
 
-# Path for Sample Images
-SAMPLE_IMAGES_DIR = "sample image"
-
-# Image Upload Section
-st.subheader("Upload an image or a video")
+# Upload Image or Video
+st.subheader("Upload an Image or Video")
 uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png", "mp4", "avi", "mov"])
 
 if uploaded_file:
-    file_type = uploaded_file.type
+    file_type = uploaded_file.type.split('/')[0]  # Check if it's an image or video
     
-    if "image" in file_type:
+    if file_type == "image":
         image = Image.open(uploaded_file)
         res = model(image)
         output = res[0].plot()
         output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
-
-        col4, col5 = st.columns([1, 1])
-        with col4:
-            st.success("Output Image")
-            st.image(output, caption="Processed Image", use_container_width=True)
-        with col5:
-            st.error("Original Image")
-            st.image(image, caption="Uploaded Image", use_container_width=True)
-
-    elif "video" in file_type:
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_file.read())
-        video_path = tfile.name
         
-        cap = cv2.VideoCapture(video_path)
-        frame_placeholder = st.empty()
-
+        st.image(output, caption="Detected Image")
+    
+    elif file_type == "video":
+        temp_video_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
+        with open(temp_video_path, "wb") as temp_file:
+            temp_file.write(uploaded_file.read())
+        
+        cap = cv2.VideoCapture(temp_video_path)
+        stframe = st.empty()
+        
         while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
+            ret, frame = cap.read()
+            if not ret:
                 break
             
-            res = model(frame)
-            output_frame = res[0].plot()
-            output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-            frame_placeholder.image(output_frame, channels="RGB", use_container_width=True)
+            results = model(frame)
+            detected_frame = results[0].plot()
+            detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
+            
+            stframe.image(detected_frame, channels="RGB")
         
         cap.release()
+        os.remove(temp_video_path)
 
-# Sample Image Section
-if not uploaded_file:
-    st.subheader("Try Sample Images")
-    sample_images = [f for f in os.listdir(SAMPLE_IMAGES_DIR) if f.endswith(('jpg', 'jpeg', 'png'))]
+st.subheader("Try Sample Images")
+SAMPLE_IMAGES_DIR = "sample image"
 
-    for i in range(0, len(sample_images), 4):
-        cols = st.columns(4)
-        for j, image_name in enumerate(sample_images[i:i + 4]):
-            if cols[j].button(f"Sample Image {i + j + 1}"):
-                uploaded_file = os.path.join(SAMPLE_IMAGES_DIR, image_name)
-                image = Image.open(uploaded_file)
-                res = model(image)
-                output = res[0].plot()
-                output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
-                col4, col5 = st.columns([1, 1])
-                with col4:
-                    st.success("Output Image")
-                    st.image(output, caption="Output Image", use_container_width=True)
-                with col5:
-                    st.error("Original Image")
-                    st.image(image, caption="Sample Image", use_container_width=True)
+sample_images = [f for f in os.listdir(SAMPLE_IMAGES_DIR) if f.endswith(("jpg", "jpeg", "png"))]
+for i in range(0, len(sample_images), 4):
+    cols = st.columns(4)
+    for j, image_name in enumerate(sample_images[i:i + 4]):
+        if cols[j].button(f"Sample Image {i + j + 1}"):
+            image = Image.open(os.path.join(SAMPLE_IMAGES_DIR, image_name))
+            res = model(image)
+            output = res[0].plot()
+            output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+            st.image(output, caption="Detected Sample Image")
